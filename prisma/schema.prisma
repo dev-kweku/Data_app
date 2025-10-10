@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  name              String
+  passwordHash      String
+  role              Role                @default(VENDOR)
+  wallet            Wallet?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  transactions      Transaction[]
+  CommissionSetting CommissionSetting?
+  WalletTransaction WalletTransaction[]
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  balance   Decimal  @default(0)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model Transaction {
+  id           String     @id @default(uuid())
+  trxnRef      String     @unique
+  user         User       @relation(fields: [userId], references: [id])
+  userId       String
+  type         TrxnType
+  amount       Decimal
+  recipient    String
+  networkId    Int?
+  bundlePlanId String?
+  status       TrxnStatus @default(PENDING)
+  commission   Decimal    @default(0)
+  apiResponse  Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model DataBundle {
+  id        String   @id @default(uuid())
+  networkId Int
+  planId    String
+  planName  String
+  price     Decimal
+  volume    String
+  validity  String
+  category  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  VENDOR
+  USER
+}
+
+enum TrxnType {
+  AIRTIME
+  DATABUNDLE
+  B2C
+  C2B
+  SMS
+  FUND_TRANSFER
+}
+
+enum TrxnStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  UNKNOWN
+}
+
+model CommissionSetting {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  rate      Float
+  modelType String // "DISCOUNT" | "MARKUP"
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CommissionType {
+  DISCOUNT
+  MARKUP
+}
+
+model WalletTransaction {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String // "CREDIT" or "DEBIT"
+  amount       Float
+  balanceAfter Float
+  metadata     String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
