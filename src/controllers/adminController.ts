@@ -138,70 +138,81 @@
         try {
             const admin = (req as any).user;
             if (!admin || admin.role !== Role.ADMIN)
-            throw new AppError("Only admin can perform this action", 403);
+                throw new AppError("Only admin can perform this action", 403);
         
             const { vendorId, amount } = req.body;
             if (!vendorId || amount === undefined)
-            throw new AppError("vendorId & amount required", 400);
+                throw new AppError("vendorId & amount required", 400);
         
             const amt = Number(amount);
             if (isNaN(amt) || amt <= 0) throw new AppError("Invalid amount", 400);
         
-        
             const tpp = await getTPPBalance();
             const tppBalance = Number(tpp.balance || 0);
-        
-            if (tppBalance < amt) {
-            throw new AppError(
-                `Insufficient TPP balance: You have GHS ${tppBalance}, cannot fund ${amt}`,
-                400
-            );
+            if (tppBalance <= 0) {
+                throw new AppError("Your TPP account has insufficient balance.", 400);
             }
         
+            const adminWallet = await getOrCreateWallet(admin.id);
+            let adminBalance = Number(adminWallet.balance);
+        
+            if (adminBalance < amt && tppBalance >= amt) {
+                const topUpAmount = Math.min(tppBalance, amt * 2); // optional: sync double
+                await prisma.wallet.update({
+                where: { userId: admin.id },
+                data: { balance: { increment: topUpAmount } },
+                });
+        
+                adminBalance += topUpAmount;
+                console.log(`🔁 Synced Admin wallet from TPP by GHS ${topUpAmount}`);
+            }
+        
+            if (adminBalance < amt) {
+                throw new AppError(
+                `Insufficient Admin wallet & TPP balance. Admin: ${adminBalance}, TPP: ${tppBalance}`,
+                400
+                );
+            }
+        
+
             
             await prisma.$transaction(async (tx) => {
-            const adminWallet = await getOrCreateWallet(admin.id);
-        
-            if (Number(adminWallet.balance) < amt) {
-                throw new AppError("Admin wallet has insufficient balance", 400);
-            }
-        
-            await tx.wallet.update({
+                await tx.wallet.update({
                 where: { userId: admin.id },
                 data: { balance: { decrement: amt } },
-            });
+                });
         
-            await tx.wallet.upsert({
+                await tx.wallet.upsert({
                 where: { userId: vendorId },
                 update: { balance: { increment: amt } },
                 create: { userId: vendorId, balance: amt },
-            });
+                });
         
-            await tx.transaction.create({
+                await tx.transaction.create({
                 data: {
-                trxnRef: `fund_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-                userId: admin.id,
-                type: TrxnType.FUND_TRANSFER,
-                amount: amt,
-                recipient: vendorId,
-                status: TrxnStatus.SUCCESS,
-                apiResponse: { note: "Admin funded vendor (TPP checked)" },
+                    trxnRef: `fund_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+                    userId: admin.id,
+                    type: TrxnType.FUND_TRANSFER,
+                    amount: amt,
+                    recipient: vendorId,
+                    status: TrxnStatus.SUCCESS,
+                    apiResponse: { note: "Admin funded vendor (auto-synced from TPP)" },
                 },
-            });
+                });
             });
         
             res.json({
-            message: `Vendor funded successfully. TPP Balance remaining: GHS ${(tppBalance - amt).toFixed(2)}`,
+                message: `Vendor funded successfully. 
+                Local Admin Wallet now synced with TPP.
+                Remaining TPP balance: GHS ${(tppBalance - amt).toFixed(2)}`,
             });
-        } catch (err) {
+            } catch (err) {
             next(err);
+            }
         }
-    }
     
 
-    /**
-     * 📊 List Transactions (admin filters)
-     */
+
     export async function listTransactions(req: Request, res: Response, next: NextFunction) {
     try {
         ensureAdmin((req as any).user);

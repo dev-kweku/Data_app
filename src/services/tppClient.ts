@@ -93,3 +93,28 @@ export async function getTPPBalance(){
     throw new Error(`Failed to fetch TPP balance: ${err.message}`)
   }
 }
+
+export async function sendTPPSms(recipient: string, message: string, senderId = "DataApp") {
+  const BASE_URL = process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api/TopUpApi";
+  const API_KEY = process.env.TPP_API_KEY!;
+  const API_SECRET = process.env.TPP_API_SECRET!;
+
+  try {
+    const res = await axios.get(`${BASE_URL}/sms`, {
+      headers: { ApiKey: API_KEY, ApiSecret: API_SECRET },
+      params: {
+        recipient,
+        message,
+        sender_id: senderId,
+        trxn: `sms-${Date.now()}`,
+      },
+      timeout: 10000,
+    });
+
+    return res.data;
+  } catch (err: any) {
+    console.error(" SMS send failed:", err.message);
+    return null; 
+  }
+}
+

@@ -27,7 +27,9 @@
      * MARKUP (vendor pays commission),
      * and FLAT (fixed fee deduction).
      */
-    export async function computeVendorCost(
+
+    // optional use @use on in utils
+    export async function computeVendorCost1(
     vendorId: string,
     baseAmount: number
     ): Promise<{ vendorPays: number; commission: number }> {

@@ -1,8 +1,11 @@
     import { PrismaClient } from "@prisma/client";
     import app from "./app";
+    import { startTPPSyncJob } from "./jobs/syncTPPBalanceJob";
     
     const prisma=new PrismaClient()
     const PORT = process.env.PORT || 4000;
+
+    startTPPSyncJob();
 
     async function main() {
     app.listen(PORT, () => {
