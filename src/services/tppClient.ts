@@ -1,11 +1,10 @@
 import axios from "axios";
 
-const BASE_URL =
-  process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api";
+const BASE_URL = process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api";
 
 const API_KEY = process.env.TPP_API_KEY || "demo_key";
 const API_SECRET = process.env.TPP_API_SECRET || "demo_secret";
-const RETAILER = process.env.TPP_RETAILER || "oliver@myone4all.com"; // your registered retailer phone
+const RETAILER = process.env.TPP_RETAILER || "oliver@myone4all.com"; 
 
 // ⚡ Helper for consistent headers
 const headers = {
@@ -83,16 +82,40 @@ export async function tppGetDataBundleList(network: number) {
 }
 
 // get balance
-export async function getTPPBalance(){
-  try{
-    const res=await axios.get(`${BASE_URL}/TopUpApi/balance`,{
-      headers,params:{retailer:RETAILER},timeout:10000,
-    });
-    return res.data;
-  }catch(err:any){
-    throw new Error(`Failed to fetch TPP balance: ${err.message}`)
+// export async function getTPPBalance(){
+//   try{
+//     const res=await axios.get(`${BASE_URL}/TopUpApi/balance`,{
+//       headers,params:{retailer:RETAILER},timeout:10000,
+//     });
+//     return res.data;
+//   }catch(err:any){
+//     throw new Error(`Failed to fetch TPP balance: ${err.message}`)
+//   }
+// }
+
+export async function getTPPBalance() {
+  const url = `${BASE_URL}/TopUpApi/balance`;
+  const res = await fetch(url, {
+    headers: {
+      ApiKey: API_SECRET,
+      ApiSecret: API_SECRET,
+    },
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("TPP balance fetch failed:", res.status, text.slice(0, 200));
+    throw new Error(`Failed to fetch TPP balance (${res.status})`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.error("TPP returned non-JSON response:", text.slice(0, 200));
+    throw new Error("TPP returned invalid JSON (maybe an HTML error page?)");
   }
 }
+
 
 export async function sendTPPSms(recipient: string, message: string, senderId = "DataApp") {
   const BASE_URL = process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api/TopUpApi";
