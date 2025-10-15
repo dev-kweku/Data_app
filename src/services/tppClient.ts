@@ -2,8 +2,8 @@ import axios from "axios";
 
 const BASE_URL = process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api";
 
-const API_KEY = process.env.TPP_API_KEY || "demo_key";
-const API_SECRET = process.env.TPP_API_SECRET || "demo_secret";
+const API_KEY = process.env.TPP_API_KEY || "";
+const API_SECRET = process.env.TPP_API_SECRET || "";
 const RETAILER = process.env.TPP_RETAILER || "oliver@myone4all.com"; 
 
 // ⚡ Helper for consistent headers
@@ -95,14 +95,16 @@ export async function tppGetDataBundleList(network: number) {
 
 export async function getTPPBalance() {
   const url = `${BASE_URL}/TopUpApi/balance`;
+
   const res = await fetch(url, {
     headers: {
-      ApiKey: API_SECRET,
+      ApiKey: API_KEY,
       ApiSecret: API_SECRET,
     },
   });
 
   const text = await res.text();
+
   if (!res.ok) {
     console.error("TPP balance fetch failed:", res.status, text.slice(0, 200));
     throw new Error(`Failed to fetch TPP balance (${res.status})`);
@@ -115,6 +117,7 @@ export async function getTPPBalance() {
     throw new Error("TPP returned invalid JSON (maybe an HTML error page?)");
   }
 }
+
 
 
 export async function sendTPPSms(recipient: string, message: string, senderId = "DataApp") {
