@@ -2,7 +2,6 @@
 import { Router } from "express";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import {
-  register,
   createVendor,
   listVendors,
   getVendor,
@@ -13,6 +12,7 @@ import {
   getCommission,
   getTPPBalanceHandler
 } from "../controllers/adminController";
+import { register } from "../controllers/authController";
 
 const router = Router();
 

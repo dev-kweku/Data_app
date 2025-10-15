@@ -20,61 +20,61 @@
 
 
     // admin register endpoint
-    export async function register(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { email, password, name, phone, role } = req.body;
+    // export async function register(req: Request, res: Response, next: NextFunction) {
+    //     try {
+    //         const { email, password, name,  role } = req.body;
         
             
-            if (!email || !password) {
-                throw new AppError("Email and password are required", 400);
-            }
+    //         if (!email || !password) {
+    //             throw new AppError("Email and password are required", 400);
+    //         }
         
             
-            const existingUser = await prisma.user.findUnique({ where: { email } });
-            if (existingUser) {
-                throw new AppError("User already exists", 400);
-            }
+    //         const existingUser = await prisma.user.findUnique({ where: { email } });
+    //         if (existingUser) {
+    //             throw new AppError("User already exists", 400);
+    //         }
         
             
-            const hashedPassword = await bcrypt.hash(password, 10);
+    //         const hashedPassword = await bcrypt.hash(password, 10);
         
             
-            const newUser = await prisma.user.create({
-                data: {
-                email,
-                passwordHash: hashedPassword,
-                name,
-                role: (role as Role) || Role.USER, 
-                },
-            });
+    //         const newUser = await prisma.user.create({
+    //             data: {
+    //             email,
+    //             passwordHash: hashedPassword,
+    //             name,
+    //             role: (role as Role) || Role.USER, 
+    //             },
+    //         });
         
         
-            if (!process.env.JWT_SECRET) {
-                throw new AppError("JWT secret not configured", 500);
-            }
+    //         if (!process.env.JWT_SECRET) {
+    //             throw new AppError("JWT secret not configured", 500);
+    //         }
         
         
-            const token = jwt.sign(
-                { id: newUser.id, role: newUser.role },
-                process.env.JWT_SECRET,
-                { expiresIn: "7d" }
-            );
+    //         const token = jwt.sign(
+    //             { id: newUser.id, role: newUser.role },
+    //             process.env.JWT_SECRET,
+    //             { expiresIn: "7d" }
+    //         );
         
             
-            res.status(201).json({
-                success: true,
-                message: "User registered successfully",
-                user: {
-                id: newUser.id,
-                email: newUser.email,
-                role: newUser.role,
-                },
-                token,
-            });
-            } catch (error:any) {
-            next(error instanceof AppError ? error : new AppError(error.message, 500));
-            }
-        }
+    //         res.status(201).json({
+    //             success: true,
+    //             message: "User registered successfully",
+    //             user: {
+    //             id: newUser.id,
+    //             email: newUser.email,
+    //             role: newUser.role,
+    //             },
+    //             token,
+    //         });
+    //         } catch (error:any) {
+    //         next(error instanceof AppError ? error : new AppError(error.message, 500));
+    //         }
+    //     }
 
     /**
      * 🧱 Create a new Vendor (Admin Only)
