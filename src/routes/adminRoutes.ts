@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import {
+  register,
   createVendor,
   listVendors,
   getVendor,
@@ -18,7 +19,7 @@ const router = Router();
 
 router.use(authenticate, requireAdmin);
 
-
+router.post("/register",register)
 router.post("/vendors", createVendor);              
 router.get("/vendors", listVendors);                
 router.get("/vendors/:vendorId", getVendor);        
