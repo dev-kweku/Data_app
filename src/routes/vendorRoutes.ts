@@ -1,11 +1,11 @@
-
 import { Router } from "express";
 import { authenticate, requireVendor } from "../middleware/auth";
 import {
   buyAirtime,
   buyDataBundle,
   getWalletBalanceHandler,
-  getMyTransactions,getDataBundleList
+  getMyTransactions,
+  getDataBundleList,
 } from "../controllers/vendorController";
 
 const router = Router();
@@ -14,13 +14,16 @@ const router = Router();
 router.use(authenticate, requireVendor);
 
 
-router.post("/airtime", buyAirtime);         
-router.post("/databundle", buyDataBundle);   
+router.post("/airtime", buyAirtime);
+
+
+router.post("/data-bundle", buyDataBundle);
+
+
+router.get("/data-bundles", getDataBundleList);
 
 
 router.get("/wallet", getWalletBalanceHandler);
-router.get("/dataBundleList", getDataBundleList);
-
 
 
 router.get("/transactions", getMyTransactions);

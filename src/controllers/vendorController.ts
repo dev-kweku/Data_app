@@ -19,12 +19,11 @@
     } from "../services/tppClient";
 
     const prisma = new PrismaClient();
-
-    // --- Helpers ---
     const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
     if (!ADMIN_USER_ID) throw new Error("ADMIN_USERID environment variable not set");
     const ADMIN_USER_ID_STRING = ADMIN_USER_ID as string;
 
+    // --- Helpers ---
     function toNumber(value: any): number {
     if (value == null) return 0;
     if (typeof value === "number") return value;
@@ -50,20 +49,17 @@
     success: boolean = false
     ) {
     await prisma.$transaction(async (tx) => {
-        // Update vendor transaction
         await tx.transaction.update({
         where: { trxnRef: transactionRef },
         data: { status: success ? TrxnStatus.SUCCESS : TrxnStatus.FAILED },
         });
 
         if (success) {
-        // Deduct wallet balance
         await tx.wallet.update({
             where: { userId: vendorId },
             data: { balance: { decrement: vendorPays } },
         });
 
-        // Create admin-side transaction for analytics
         const note = planId
             ? `Vendor ${vendorEmail} sold data bundle ${planId}`
             : `Vendor ${vendorEmail} sold airtime`;
@@ -104,7 +100,10 @@
         const { vendorPays, commission } = await computeVendorCost(vendor.id, baseAmount);
         const wallet = await getOrCreateWallet(vendor.id);
         if (toNumber(wallet.balance) < vendorPays)
-        throw new AppError(`Insufficient wallet balance. Required: ${vendorPays}, Available: ${wallet.balance}`, 400);
+        throw new AppError(
+            `Insufficient wallet balance. Required: ${vendorPays}, Available: ${wallet.balance}`,
+            400
+        );
 
         const trx = await createTransaction({
         userId: vendor.id,
@@ -172,6 +171,7 @@
         message: success ? "Airtime purchase successful" : "Airtime purchase failed",
         trxnRef: trx.trxnRef,
         status: success ? "SUCCESS" : "FAILED",
+        statusCode: getStatusCode(apiResp),
         apiResponse: apiResp,
         });
     } catch (err) {
@@ -196,7 +196,10 @@
         const { vendorPays, commission } = await computeVendorCost(vendor.id, baseAmount);
         const wallet = await getOrCreateWallet(vendor.id);
         if (toNumber(wallet.balance) < vendorPays)
-        throw new AppError(`Insufficient wallet balance. Required: ${vendorPays}, Available: ${wallet.balance}`, 400);
+        throw new AppError(
+            `Insufficient wallet balance. Required: ${vendorPays}, Available: ${wallet.balance}`,
+            400
+        );
 
         const trx = await createTransaction({
         userId: vendor.id,
@@ -217,7 +220,6 @@
             network: networkId,
             recipient: phoneNumber,
             data_code: planId,
-            amount: baseAmount,
             trxn: trx.trxnRef,
         });
 
@@ -254,7 +256,7 @@
         if (success) {
         const msg = `Data bundle purchase successful! Plan ${planId} for ${phoneNumber}, costing GHS ${baseAmount.toFixed(
             2
-        )}. New balance: GHS ${apiResp.balance_after ?? "N/A"}.`;
+        )}.`;
         try {
             await sendTPPSms(phoneNumber, msg, "DataApp");
         } catch (smsErr) {
@@ -266,6 +268,7 @@
         message: success ? "Data bundle purchase successful" : "Data bundle purchase failed",
         trxnRef: trx.trxnRef,
         status: success ? "SUCCESS" : "FAILED",
+        statusCode: getStatusCode(apiResp),
         apiResponse: apiResp,
         });
     } catch (err) {
@@ -315,16 +318,23 @@
     }
     }
 
+    // ✅ Updated to use live TPP API instead of static list
     export async function getDataBundleList(req: Request, res: Response, next: NextFunction) {
     try {
         const vendor = (req as any).user;
         if (!vendor || vendor.role !== "VENDOR") throw new AppError("Vendor access only", 403);
 
         const networkId = Number(req.query.networkId);
-        if (!networkId || isNaN(networkId)) throw new AppError("networkId query parameter must be a number", 400);
+        if (!networkId || isNaN(networkId)) {
+        throw new AppError("networkId query parameter must be a number", 400);
+        }
 
         const bundles = await tppGetDataBundleList(networkId);
-        return res.status(200).json({ networkId, bundles });
+
+        return res.status(200).json({
+        networkId,
+        bundles,
+        });
     } catch (err) {
         console.error("getDataBundleList error:", err);
         return next(err);
