@@ -319,22 +319,51 @@
     }
 
 
+    // export async function getDataBundleList(req: Request, res: Response, next: NextFunction) {
+    //     try {
+    //         const vendor = (req as any).user;
+    //         if (!vendor || vendor.role !== "VENDOR") throw new AppError("Vendor access only", 403);
+        
+    //         const networkId = Number(req.query.networkId);
+    //         if (!networkId || isNaN(networkId)) {
+    //             throw new AppError("networkId query parameter must be a number", 400);
+    //         }
+        
+    //         const bundles = await tppGetDataBundleList(networkId);
+        
+    //         return res.status(200).json({ networkId, bundles });
+    //         } catch (err) {
+    //         console.error("getDataBundleList error:", err);
+    //         return next(err);
+    //         }
+    //     }
+
+
     export async function getDataBundleList(req: Request, res: Response, next: NextFunction) {
         try {
             const vendor = (req as any).user;
-            if (!vendor || vendor.role !== "VENDOR") throw new AppError("Vendor access only", 403);
-        
+            if (!vendor || vendor.role !== "VENDOR")
+                throw new AppError("Vendor access only", 403);
+    
             const networkId = Number(req.query.networkId);
             if (!networkId || isNaN(networkId)) {
                 throw new AppError("networkId query parameter must be a number", 400);
             }
-        
-            const bundles = await tppGetDataBundleList(networkId);
-        
+    
+            let bundles: any[] = [];
+            try {
+                const tppBundles = await tppGetDataBundleList(networkId);
+                if (Array.isArray(tppBundles)) bundles = tppBundles;
+            } catch (tppErr) {
+                console.error("TPP getDataBundleList failed:", tppErr);
+                bundles = []; // fallback empty array
+            }
+    
             return res.status(200).json({ networkId, bundles });
-            } catch (err) {
+        } catch (err) {
             console.error("getDataBundleList error:", err);
             return next(err);
-            }
         }
+    }
+    
         
