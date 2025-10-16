@@ -21,7 +21,7 @@
     const prisma = new PrismaClient();
 
     // --- Helpers ---
-    const ADMIN_USER_ID = process.env.AMIN_USER_ID;
+    const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
     if (!ADMIN_USER_ID) throw new Error("ADMIN_USERID environment variable not set");
     const ADMIN_USER_ID_STRING = ADMIN_USER_ID as string;
 
