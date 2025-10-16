@@ -22,7 +22,7 @@
 
     // --- Helpers ---
     const ADMIN_USER_ID = process.env.AMIN_USERID;
-    if (!ADMIN_USER_ID) throw new Error("ADMIN_USER_ID environment variable not set");
+    if (!ADMIN_USER_ID) throw new Error("ADMIN_USERID environment variable not set");
     const ADMIN_USER_ID_STRING = ADMIN_USER_ID as string;
 
     function toNumber(value: any): number {
