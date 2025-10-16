@@ -44,4 +44,18 @@
     res.status(err?.status || 500).json({ message: err?.message || "Internal Server Error" });
     });
 
+    app.use((err:any, req:any, res:any, next:any) => {
+    console.error("💥 Global error handler:", err);
+    
+        if (res.headersSent) return next(err);
+    
+        const statusCode = err.statusCode || 500;
+    
+        res.status(statusCode).json({
+        status: "error",
+        message: err.message || "Internal Server Error",
+        });
+    });
+    
+
     export default app;

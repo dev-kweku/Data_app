@@ -79,6 +79,7 @@ enum TrxnType {
   C2B
   SMS
   FUND_TRANSFER
+  VENDOR_SALE
 }
 
 enum TrxnStatus {

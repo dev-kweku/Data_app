@@ -5,7 +5,7 @@ import {
   buyAirtime,
   buyDataBundle,
   getWalletBalanceHandler,
-  getMyTransactions,
+  getMyTransactions,getDataBundleList
 } from "../controllers/vendorController";
 
 const router = Router();
@@ -18,7 +18,9 @@ router.post("/airtime", buyAirtime);
 router.post("/databundle", buyDataBundle);   
 
 
-router.get("/wallet", getWalletBalanceHandler); 
+router.get("/wallet", getWalletBalanceHandler);
+router.get("/dataBundleList", getDataBundleList);
+
 
 
 router.get("/transactions", getMyTransactions);
