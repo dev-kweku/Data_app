@@ -1,9 +1,24 @@
 import axios from "axios";
+import { AppError } from "../utils/errors";
 
 const BASE_URL = process.env.TPP_BASE_URL || "https://tppgh.myone4all.com/api";
 const API_KEY = process.env.TPP_API_KEY!;
 const API_SECRET = process.env.TPP_API_SECRET!;
 const RETAILER = process.env.TPP_RETAILER || "233245000000"; // must be a phone number per docs
+
+
+const NETWORK_MAP: Record<number, string> = {
+  0: "Unknown",
+  1: "AirtelTigo",
+  2: "EXPRESSO",
+  3: "GLO",
+  4: "MTN",
+  5: "TiGO",
+  6: "Telecel",
+  8: "Busy",
+  9: "Surfline",
+  13: "MTN Yellow",
+};
 
 // ⚙️ Common headers
 const headers = {
@@ -73,7 +88,7 @@ export async function tppDataBundle(payload: {
   }
 }
 
-// 🟨 Transaction Status
+
 export async function tppTransactionStatus(trxn: string) {
   try {
     const res = await axios.get(`${BASE_URL}/TopUpApi/transactionStatus`, {
@@ -88,31 +103,51 @@ export async function tppTransactionStatus(trxn: string) {
   }
 }
 
-// 🟧 Get Data Bundle List (fixed)
-export async function tppGetDataBundleList(network: number) {
+
+export async function tppGetDataBundleList(networkId: number) {
   try {
-    const res = await axios.get(`${BASE_URL}/TopUpApi/dataBundleList`, {
-      headers,
-      params: { network },
-      timeout: 15000,
-    });
+    const response = await axios.get(
+      `${process.env.TPP_BASE_URL}/TopUpApi/dataBundleList`,
+      {
+        headers: {
+          ApiKey: process.env.TPP_API_KEY,
+          ApiSecret: process.env.TPP_API_SECRET,
+          Accept: "application/json",
+        },
+        params: {
+          network: networkId,
+        },
+        timeout: 15000,
+      }
+    );
 
-    const data = res.data;
+    const data = response.data;
 
-    // ✅ TPP returns { bundles: [...], message, status, status-code }
-    if (!data || !data.bundles || !Array.isArray(data.bundles)) {
-      console.error("Unexpected DataBundleList format:", data);
-      throw new Error("Invalid data bundle list response from TPP");
+    if (!data || !Array.isArray(data.bundles)) {
+      throw new AppError("Invalid response format from TPP API", 502);
     }
 
-    return data.bundles;
+    
+    const bundles = data.bundles.map((b: any) => ({
+      planId: b.plan_id,
+      name: b.plan_name,
+      price: parseFloat(b.price),
+      category: b.category,
+      validity: b.validity,
+      volume: b.volume,
+      type: b.type,
+      networkId: b.network_id,
+      networkName: NETWORK_MAP[b.network_id] || "Unknown",
+    }));
+
+    return bundles;
   } catch (err: any) {
-    console.error("TPP Data Bundle List fetch failed:", err.response?.data || err.message);
-    throw new Error(err.message || "Failed to fetch data bundle list");
+    console.error("TPP GetDataBundleList Error:", err.message);
+    throw new AppError("Failed to fetch data bundle list from provider", 503);
   }
 }
 
-// 🟦 Get Balance
+
 export async function getTPPBalance() {
   try {
     const res = await axios.get(`${BASE_URL}/TopUpApi/balance`, {
@@ -131,7 +166,7 @@ export async function getTPPBalance() {
   }
 }
 
-// 🟪 Send SMS via TPP
+
 export async function sendTPPSms(
   recipient: string,
   message: string,

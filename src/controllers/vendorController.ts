@@ -318,25 +318,47 @@
     }
     }
 
-    // ✅ Updated to use live TPP API instead of static list
+
     export async function getDataBundleList(req: Request, res: Response, next: NextFunction) {
-    try {
-        const vendor = (req as any).user;
-        if (!vendor || vendor.role !== "VENDOR") throw new AppError("Vendor access only", 403);
-
-        const networkId = Number(req.query.networkId);
-        if (!networkId || isNaN(networkId)) {
-        throw new AppError("networkId query parameter must be a number", 400);
+        try {
+            const vendor = (req as any).user;
+            if (!vendor || vendor.role !== "VENDOR") throw new AppError("Vendor access only", 403);
+        
+            const networkId = Number(req.query.networkId);
+            if (!networkId || isNaN(networkId)) {
+                throw new AppError("networkId query parameter must be a number", 400);
+            }
+        
+            const bundles = await tppGetDataBundleList(networkId);
+        
+            const networkMap: Record<number, string> = {
+                1: "MTN",
+                2: "Vodafone",
+                3: "AirtelTigo",
+                4: "Glo",
+            };
+        
+            const networkName = networkMap[networkId] || "Unknown Network";
+        
+            const formattedBundles = (bundles || []).map((b: any) => ({
+                planId: b.planId || b.plan_name || "",
+                name: b.name || b.plan_name || "Unnamed Plan",
+                price: Number(b.price ?? b.amount ?? 0),
+                validity: b.validity || b.duration || "N/A",
+                volume: b.volume || b.data_volume || "",
+                category: b.category || "",
+                networkId,
+                networkName,
+            }));
+        
+            return res.status(200).json({
+                networkId,
+                networkName,
+                bundles: formattedBundles,
+            });
+            } catch (err) {
+            console.error("getDataBundleList error:", err);
+            return next(err);
+            }
         }
-
-        const bundles = await tppGetDataBundleList(networkId);
-
-        return res.status(200).json({
-        networkId,
-        bundles,
-        });
-    } catch (err) {
-        console.error("getDataBundleList error:", err);
-        return next(err);
-    }
-    }
+        
