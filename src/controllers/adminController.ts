@@ -198,11 +198,8 @@
         try {
             // Ensure only admins can fund vendors
             const admin = (req as any).user;
-            if (!admin || admin.role !== Role.ADMIN) {
-                throw new AppError("Only admin can perform this action", 403);
-            }
+            ensureAdmin(admin);
     
-            // Get vendorId from URL params and amount from body
             const vendorId = req.params.vendorId;
             const { amount } = req.body;
     
@@ -215,17 +212,16 @@
                 throw new AppError("Invalid amount", 400);
             }
     
-            // Fetch TPP balance
+            // Fetch TPP balance (read-only) — just for syncing
             const tpp = await getTPPBalance();
             const tppBalance = Number(tpp.balance || 0);
             if (isNaN(tppBalance)) throw new AppError("Invalid TPP balance response", 500);
-            if (tppBalance <= 0) throw new AppError("Your TPP account has insufficient balance.", 400);
     
             // Get admin wallet
             const adminWallet = await getOrCreateWallet(admin.id);
             let adminBalance = Number(adminWallet.balance || 0);
     
-            // Sync admin wallet with TPP if needed
+            // Sync admin wallet with TPP balance if admin wallet is lower
             if (adminBalance < amt && tppBalance >= amt) {
                 const topUpAmount = Math.min(tppBalance, amt);
                 await prisma.wallet.update({
@@ -236,7 +232,7 @@
                 console.log(`Synced admin wallet with TPP by GHS ${topUpAmount}`);
             }
     
-            // Ensure admin has enough balance
+            // Ensure admin has enough balance to fund vendor
             if (adminBalance < amt) {
                 throw new AppError(
                     `Insufficient funds: Admin (${adminBalance}) < Amount (${amt})`,
@@ -259,7 +255,7 @@
                     create: { userId: vendorId, balance: amt },
                 });
     
-                // Record transaction
+                // Record internal transaction (no TPP b2c call)
                 await tx.transaction.create({
                     data: {
                         trxnRef: `fund_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
@@ -268,7 +264,7 @@
                         amount: amt,
                         recipient: vendorId,
                         status: TrxnStatus.SUCCESS,
-                        apiResponse: { note: "Admin funded vendor (synced with TPP)" },
+                        apiResponse: { note: "Admin funded vendor (internal wallet transfer, synced with TPP)" },
                     },
                 });
             });
@@ -276,7 +272,7 @@
             return res.status(200).json({
                 status: "success",
                 message: `Vendor funded successfully with GHS ${amt.toFixed(2)}.`,
-                remainingTPPBalance: tppBalance - amt,
+                remainingTPPBalance: tppBalance, // optional: can show pre-sync balance
             });
     
         } catch (err: any) {
