@@ -52,43 +52,85 @@
     /**
      * Get transaction history for authenticated user (or all if admin)
      */
+    // export async function getTransactionHistory(req: Request, res: Response, next: NextFunction) {
+    // try {
+    //     const user = (req as any).user;
+    //     if (!user) throw new AppError("Not authenticated", 401);
+
+    //     const where = user.role === "ADMIN" ? {} : { userId: user.id };
+
+    //     const transactions = await prisma.transaction.findMany({
+    //     where,
+    //     orderBy: { createdAt: "desc" },
+    //     include:
+    //         user.role === "ADMIN"
+    //         ? { user: { select: { id: true, name: true, email: true } } }
+    //         : undefined,
+    //     });
+
+    //     const formatted = transactions.map((t) => ({
+    //     id: t.id,
+    //     trxnRef: t.trxnRef,
+    //     userId: t.userId,
+    //     type: t.type,
+    //     amount: Number(t.amount),
+    //     commission: Number(t.commission ?? 0),
+    //     status: t.status,
+    //     recipient: t.recipient,
+    //     networkId: t.networkId,
+    //     bundlePlanId: t.bundlePlanId,
+    //     createdAt: t.createdAt,
+    //     apiResponse: t.apiResponse,
+    //     user: (t as any).user,
+    //     }));
+
+    //     res.json({
+    //     count: formatted.length,
+    //     transactions: formatted,
+    //     });
+    // } catch (err) {
+    //     next(err);
+    // }
+    // }
     export async function getTransactionHistory(req: Request, res: Response, next: NextFunction) {
-    try {
-        const user = (req as any).user;
-        if (!user) throw new AppError("Not authenticated", 401);
-
-        const where = user.role === "ADMIN" ? {} : { userId: user.id };
-
-        const transactions = await prisma.transaction.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        include:
-            user.role === "ADMIN"
-            ? { user: { select: { id: true, name: true, email: true } } }
-            : undefined,
-        });
-
-        const formatted = transactions.map((t) => ({
-        id: t.id,
-        trxnRef: t.trxnRef,
-        userId: t.userId,
-        type: t.type,
-        amount: Number(t.amount),
-        commission: Number(t.commission ?? 0),
-        status: t.status,
-        recipient: t.recipient,
-        networkId: t.networkId,
-        bundlePlanId: t.bundlePlanId,
-        createdAt: t.createdAt,
-        apiResponse: t.apiResponse,
-        user: (t as any).user,
-        }));
-
-        res.json({
-        count: formatted.length,
-        transactions: formatted,
-        });
-    } catch (err) {
-        next(err);
-    }
-    }
+        try {
+            const user = (req as any).user;
+            if (!user) throw new AppError("Not authenticated", 401);
+        
+            const where = user.role === "ADMIN" ? {} : { userId: user.id };
+        
+            const transactions = await prisma.transaction.findMany({
+                where,
+                distinct: ["id"], // ✅ prevent duplicate rows
+                orderBy: { createdAt: "desc" },
+                include:
+                user.role === "ADMIN"
+                    ? { user: { select: { id: true, name: true, email: true, role: true } } }
+                    : undefined,
+            });
+        
+            const formatted = transactions.map((t) => ({
+                id: t.id,
+                trxnRef: t.trxnRef,
+                userId: t.userId,
+                type: t.type,
+                amount: Number(t.amount),
+                commission: Number(t.commission ?? 0),
+                status: t.status,
+                recipient: t.recipient,
+                networkId: t.networkId,
+                bundlePlanId: t.bundlePlanId,
+                createdAt: t.createdAt,
+                apiResponse: t.apiResponse,
+                user: (t as any).user,
+            }));
+        
+            res.json({
+                count: formatted.length,
+                transactions: formatted,
+            });
+            } catch (err) {
+            next(err);
+            }
+        }
+        
