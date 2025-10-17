@@ -285,45 +285,39 @@
 
 
     export async function listTransactions(req: Request, res: Response, next: NextFunction) {
-    try {
-        ensureAdmin((req as any).user);
-
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(200, Number(req.query.limit) || 50);
-        const filters: any = {};
-
-        if (req.query.status) filters.status = String(req.query.status).toUpperCase();
-        if (req.query.vendorId) filters.userId = String(req.query.vendorId);
-        if (req.query.dateFrom || req.query.dateTo) {
-        filters.createdAt = {};
-        if (req.query.dateFrom) filters.createdAt.gte = new Date(String(req.query.dateFrom));
-        if (req.query.dateTo) filters.createdAt.lte = new Date(String(req.query.dateTo));
-        }
-
-        const [transactions, total] = await Promise.all([
-        prisma.transaction.findMany({
-            where: filters,
-            skip: (page - 1) * limit,
-            take: limit,
+        try {
+            const user = req.user;
+            if (!user || user.role !== "ADMIN") {
+                return next(new AppError("Admin access only", 403));
+            }
+        
+            const transactions = await prisma.transaction.findMany({
+                include: {
+                user: { select: { id: true, name: true, email: true, role: true } },
+                },
             orderBy: { createdAt: "desc" },
-        }),
-        prisma.transaction.count({ where: filters }),
-        ]);
-
-        res.json({
-        page,
-        limit,
-        total,
-        transactions: transactions.map((t) => ({
-            ...t,
-            amount: Number(t.amount),
-            commission: Number(t.commission ?? 0),
-        })),
-        });
-    } catch (err) {
-        next(err);
-    }
-    }
+            take: 100,
+            });
+        
+            const formatted = transactions.map((t) => ({
+                id: t.id,
+                trxnRef: t.trxnRef,
+                type: t.type,
+                amount: Number(t.amount),
+                commission: Number(t.commission ?? 0),
+                status: t.status,
+                recipient: t.recipient,
+                networkId: t.networkId,
+                bundlePlanId: t.bundlePlanId,
+                createdAt: t.createdAt,
+                user: t.user,
+            }));
+        
+            res.json({ transactions: formatted });
+            } catch (err) {
+            next(err);
+            }
+        }
 
     /**
      * 💼 View Wallet
