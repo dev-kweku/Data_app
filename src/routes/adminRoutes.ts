@@ -10,7 +10,8 @@ import {
   getWallet,
   setCommission,
   getCommission,
-  getTPPBalanceHandler
+  getTPPBalanceHandler,
+  getDataBundleList
 } from "../controllers/adminController";
 import { register } from "../controllers/authController";
 
@@ -29,6 +30,8 @@ router.post("/vendors/:vendorId/fund", fundVendor);
 router.get("/wallet/:userId", getWallet);    
 
 router.get('/tpp/balance',getTPPBalanceHandler)
+
+router.get("/data-bundles", getDataBundleList);
 
 
 router.get("/transactions", listTransactions);      
