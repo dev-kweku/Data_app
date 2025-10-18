@@ -54,7 +54,7 @@
         await tx.commissionSetting.create({
             data: {
             userId: newUser.id,
-            rate: 0.02,
+            rate: 0.035,
             modelType: "DISCOUNT",
             },
         });

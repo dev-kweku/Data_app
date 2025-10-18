@@ -102,7 +102,7 @@
         await tx.commissionSetting.upsert({
             where: { userId: user.id },
             update: {},
-            create: { userId: user.id, rate: 0.02, modelType: "DISCOUNT" },
+            create: { userId: user.id, rate: 0.035, modelType: "DISCOUNT" },
         });
 
         return user;

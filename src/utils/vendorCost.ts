@@ -21,7 +21,7 @@
         where: { userId: vendorId },
     });
 
-    const rate = setting?.rate ?? 0.02; 
+    const rate = setting?.rate ?? 0.035; 
     const model = setting?.modelType ?? "DISCOUNT";
 
     let vendorPays = amount;

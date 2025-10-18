@@ -15,7 +15,7 @@
     
     return (
         setting || {
-        rate: 0.02,
+        rate: 0.035,
         modelType: "DISCOUNT" as "DISCOUNT" | "MARKUP" | "FLAT",
         }
     );
@@ -59,7 +59,7 @@
         break;
 
         default:
-        commission = Number((baseAmount * 0.02).toFixed(2));
+        commission = Number((baseAmount * 0.035).toFixed(2));
         vendorPays = Number((baseAmount - commission).toFixed(2));
         break;
     }
