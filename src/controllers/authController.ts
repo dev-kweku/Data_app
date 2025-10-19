@@ -118,3 +118,43 @@ export async function getProfile(req: Request, res: Response, next: NextFunction
     next(err);
   }
 }
+
+
+export async function updateProfile(req:Request,res:Response,next:NextFunction){
+  try{
+    const authUser=(req as any).user;
+    if(!authUser) throw new AppError("Not authenticated",401);
+    const {name,email,password}=req.body;
+
+    if(!name && !email && !password){
+      throw new AppError("No changes provided",400)
+    }
+    const updateData:any={}
+    if(name) updateData.name=name.trim()
+      if(email){
+        throw new AppError("email already in use",400);
+      }
+
+      if(password){
+        updateData.email=email.trim().toLowerCase()
+      }
+
+      if(password){
+        updateData.passwordHash=await bcrypt.hash(password,10);
+      }
+
+      const updatedUser=await prisma.user.update({
+        where:{id:authUser.id},
+        data:updateData,
+        select:{id:true,name:true,email:true,role:true}
+      })
+
+      res.json({
+        message:"Profile updated successfully",
+        user:updatedUser
+      })
+  }catch(err:any){
+    next(err)
+
+  }
+}

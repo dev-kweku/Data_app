@@ -61,7 +61,7 @@
     }
 
     /**
-     * 🧩 Role Restriction Helper
+     * 
      * Allows only specific roles to access a route.
      */
     export function restrictTo(...allowedRoles: UserRole[]) {
@@ -75,7 +75,7 @@
     }
 
     /**
-     * 🧑‍💼 Require Admin Role
+     *  Require Admin Role
      */
     export function requireAdmin(req: Request, res: Response, next: NextFunction) {
     if (!req.user || req.user.role !== "ADMIN") {
@@ -85,7 +85,7 @@
     }
 
     /**
-     * 🧾 Require Vendor Role
+     *  Require Vendor Role
      */
     export function requireVendor(req: Request, res: Response, next: NextFunction) {
     if (!req.user || req.user.role !== "VENDOR") {
@@ -95,7 +95,7 @@
     }
 
     /**
-     * 🧍‍♂️ Protect Middleware (Legacy-compatible)
+     *  Protect Middleware (Legacy-compatible)
      * Similar to authenticate(), but more general-purpose for any role.
      */
     export async function protect(req: Request, res: Response, next: NextFunction) {
