@@ -132,13 +132,14 @@ export async function updateProfile(req:Request,res:Response,next:NextFunction){
     const updateData:any={}
     if(name) updateData.name=name.trim()
       if(email){
-        throw new AppError("email already in use",400);
-      }
-
-      if(password){
+        const existing=await prisma.user.findUnique({where:{email}})
+        if(existing&&existing.id !==authUser.id){
+          throw new AppError("Email already in use",400);
+        }
         updateData.email=email.trim().toLowerCase()
       }
 
+    
       if(password){
         updateData.passwordHash=await bcrypt.hash(password,10);
       }
