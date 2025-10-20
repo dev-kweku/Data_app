@@ -20,13 +20,13 @@ const NETWORK_MAP: Record<number, string> = {
   13: "MTN Yellow",
 };
 
-// ⚙️ Common headers
+//  Common headers
 const headers = {
   ApiKey: API_KEY,
   ApiSecret: API_SECRET,
 };
 
-// 🟦 Airtime Purchase
+//  Airtime Purchase
 export async function tppAirtimeTopup(payload: {
   recipient: string;
   amount: number;
@@ -57,7 +57,7 @@ export async function tppAirtimeTopup(payload: {
   }
 }
 
-// 🟩 Data Bundle Purchase
+//  Data Bundle Purchase
 export async function tppDataBundle(payload: {
   recipient: string;
   data_code: string;
@@ -88,7 +88,7 @@ export async function tppDataBundle(payload: {
   }
 }
 
-
+// get transaction status
 export async function tppTransactionStatus(trxn: string) {
   try {
     const res = await axios.get(`${BASE_URL}/TopUpApi/transactionStatus`, {
@@ -103,7 +103,7 @@ export async function tppTransactionStatus(trxn: string) {
   }
 }
 
-
+// get tpp databundle list
 export async function tppGetDataBundleList(networkId: number) {
   try {
     const response = await axios.get(
@@ -147,7 +147,7 @@ export async function tppGetDataBundleList(networkId: number) {
   }
 }
 
-
+// get balance
 export async function getTPPBalance() {
   try {
     const res = await axios.get(`${BASE_URL}/TopUpApi/balance`, {
@@ -166,7 +166,7 @@ export async function getTPPBalance() {
   }
 }
 
-
+// send sms
 export async function sendTPPSms(
   recipient: string,
   message: string,
@@ -192,5 +192,58 @@ export async function sendTPPSms(
   } catch (err: any) {
     console.error("TPP SMS send failed:", err.response?.data || err.message);
     throw new Error(err.message || "Failed to send SMS via TPP");
+  }
+}
+
+// send momo
+export async function tppSendMomo(payload:{recipient:string;amount:number;network?:number;trxn:string}){
+  try{
+    const res=await axios.get(`${BASE_URL}/TopUpApi/b2c`,{
+      headers,
+      params:{
+        retailer:RETAILER,
+        recipient:payload.recipient,
+        amount:payload.amount,
+        trxn:payload.trxn,
+        network:payload.network??0,
+      },
+      timeout:20000,
+    })
+
+    if(!res.data?.["status-code"]){
+      throw new Error("Invalid TPP MoMo response")
+    }
+    return res.data;
+  }catch(err:any){
+    console.error("TPP MoMo failed: ",err.response?.data||err.message)
+
+  }
+}
+
+// collect payment
+export async function tppCollectMoMo(payload:{
+  customer:string;
+  amount:number;
+  trxn:string;
+  network?:number;
+}){
+  try{
+    const res=await axios.get(`${BASE_URL}/TopUpApi/c2b`,{
+      headers,
+      params:{
+        retailer:RETAILER,
+        customer:payload.customer,
+        amount:payload.amount,
+        trxn:payload.trxn,
+        network:payload.network??0,
+      },
+      timeout:20000,
+    })
+    if(!res.data?.["status-code"]) throw new Error("Invalid Tpp Momo C2B response")
+      return res.data;
+  }catch(err:any){
+    console.log("TPP MOMO C2B failed :",err.response?.data||err.message)
+    throw new Error(err.message||"TPP MOMO C2B failed")
+
   }
 }
