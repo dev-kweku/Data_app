@@ -1,11 +1,11 @@
 {
   "name": "data_app",
   "version": "1.0.0",
-  "main":"dist/server.js",
+  "main": "dist/server.js",
   "scripts": {
-      "dev": "ts-node-dev src/server.ts",
-      "build": "prisma generate && tsc",
-      "start": "node dist/server.js"
+    "dev": "ts-node-dev src/server.ts",
+    "build": "prisma generate && tsc",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
+    "qrcode": "^1.5.4",
     "uuid": "^13.0.0",
     "winston": "^3.18.3",
     "xss-clean": "^0.1.4",
@@ -36,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.7.0",
+    "@types/qrcode": "^1.5.5",
     "@types/winston": "^2.4.4",
     "prisma": "^6.16.3",
     "ts-node-dev": "^2.0.0",

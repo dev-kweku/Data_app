@@ -401,6 +401,34 @@
             next(err);
             }
         }
+        // remove vendor
+    export async function removeVendor(req:Request,res:Response,next:NextFunction){
+        try{
+            ensureAdmin((req as any).user);
+            const vendorId=String(req.params.vendorId);
+            if(!vendorId) throw new AppError("VendorId required",400);
+
+            const vendor=await prisma.user.findUnique({where:{id:vendorId}})
+            if(!vendor) throw new AppError("Vendor not found",404);
+            if(vendor.role !==Role.VENDOR) throw new AppError("User is not vendor",400)
+                await prisma.$transaction(async (tx) => {
+                    await tx.wallet.deleteMany({ where: { userId: vendorId } });
+                    await tx.commissionSetting.deleteMany({ where: { userId: vendorId } });
+                    await tx.transaction.deleteMany({ where: { userId: vendorId } });
+                    await tx.user.delete({ where: { id: vendorId } });
+                });
+
+
+                res.status(200).json({
+                    message: `Vendor '${vendor.name}' (${vendor.email}) removed successfully.`,
+                    vendorId,
+                });
+        }catch(error:any){
+            next(error)
+
+        }
+
+    }
 
 
 // get balance controller
@@ -428,3 +456,6 @@ export async function getTPPBalanceHandler(
         next(err);
         }
     }
+
+
+    

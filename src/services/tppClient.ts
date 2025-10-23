@@ -70,7 +70,7 @@ export async function tppDataBundle(payload: {
       params: {
         retailer: RETAILER,
         recipient: payload.recipient,
-        data_code: payload.data_code,
+        data_code: payload.data_code, 
         network: payload.network,
         trxn: payload.trxn,
       },

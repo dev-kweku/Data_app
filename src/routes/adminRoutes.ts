@@ -11,7 +11,8 @@ import {
   setCommission,
   getCommission,
   getTPPBalanceHandler,
-  getDataBundleList
+  getDataBundleList,
+  removeVendor
 } from "../controllers/adminController";
 import { register } from "../controllers/authController";
 
@@ -39,5 +40,6 @@ router.get("/transactions", listTransactions);
 
 router.post("/vendors/:vendorId/commission", setCommission); 
 router.get("/vendors/:vendorId/commission",getCommission)
+router.delete("/vendors/:vendorId",removeVendor)
 
 export default router;

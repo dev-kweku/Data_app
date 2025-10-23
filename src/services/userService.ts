@@ -27,14 +27,14 @@
     }) {
     const normalizedEmail = data.email.toLowerCase().trim();
 
-    // 1️⃣ Check for existing user
+    // 1️ Check for existing user
     const existing = await findUserByEmail(normalizedEmail);
     if (existing) throw new AppError("Email already exists", 400);
 
-    // 2️⃣ Hash password
+    // 2️ Hash password
     const passwordHash = await bcrypt.hash(data.password, 10);
 
-    // 3️⃣ Create user and wallet transactionally
+    // 3 Create user and wallet transactionally
     const user = await prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
         data: {
