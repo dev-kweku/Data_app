@@ -1,5 +1,5 @@
     import { Request, Response, NextFunction } from "express";
-    import { PrismaClient, TrxnStatus, TrxnType } from "@prisma/client";
+    import { PrismaClient, Role, TrxnStatus, TrxnType } from "@prisma/client";
     import { AppError } from "../utils/errors";
     import {
     tppAirtimeTopup,
@@ -8,8 +8,17 @@
     tppTransactionStatus,
     sendTPPSms,
     } from "../services/tppClient";
+    import bcrypt from "bcrypt"
+    import jwt,{SignOptions} from "jsonwebtoken"
 
     const prisma = new PrismaClient();
+    const JWT_SECRET:string=process.env.JWT_SECRET||"dev-secret";
+    const JWT_EXPIRES_IN:string=process.env.JWT_EXPIRES_IN||"7d";
+
+    function generateToken(user:{id:string;role:Role}){
+        const options:SignOptions={expiresIn:JWT_EXPIRES_IN as any};
+        return jwt.sign({id:user.id,role:user.role},JWT_SECRET,options)
+    }
 
     /** Helpers */
     function toNumber(val: any): number {
@@ -27,6 +36,81 @@
         "99"
     );
     }
+
+
+    export async function registerUser(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { email, name, password } = req.body;
+        
+            if (!email || !name || !password) {
+                throw new AppError("Email, name, and password are required", 400);
+            }
+        
+            const existing = await prisma.user.findUnique({ where: { email } });
+            if (existing) throw new AppError("Email already registered", 400);
+        
+            const passwordHash = await bcrypt.hash(password, 10);
+        
+            const user = await prisma.user.create({
+                data: {
+                email,
+                name,
+                passwordHash,
+                role: Role.USER,
+                },
+            });
+        
+            await prisma.wallet.create({
+                data: { userId: user.id, balance: 0 },
+            });
+        
+            const token = generateToken(user);
+        
+            return res.status(201).json({
+                message: "Registration successful",
+                token,
+                user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                },
+            });
+            } catch (err) {
+            next(err);
+            }
+        }
+        
+
+        export async function loginUser(req: Request, res: Response, next: NextFunction) {
+            try {
+            const { email, password } = req.body;
+        
+            if (!email || !password) throw new AppError("Email and password required", 400);
+        
+            const user = await prisma.user.findUnique({ where: { email } });
+            if (!user) throw new AppError("Invalid credentials", 401);
+        
+            const validPassword = await bcrypt.compare(password, user.passwordHash);
+            if (!validPassword) throw new AppError("Invalid credentials", 401);
+        
+            const token = generateToken(user);
+        
+            return res.json({
+                message: "Login successful",
+                token,
+                user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                },
+            });
+            } catch (err) {
+            next(err);
+            }
+        }
+        
 
     /**
      * FUND WALLET VIA MOMO (C2B)
@@ -456,3 +540,6 @@
         return next(err);
     }
     }
+
+    // user auth
+
