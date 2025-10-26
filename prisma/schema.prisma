@@ -10,7 +10,7 @@ datasource db {
 model User {
   id                String              @id @default(uuid())
   email             String?             @unique
-  phone             String?              @unique
+  phone             String?             @unique
   name              String?
   passwordHash      String?
   role              Role                @default(VENDOR)
@@ -117,6 +117,7 @@ model OtpSession {
   prefix      String
   expiresAt   DateTime
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Role {

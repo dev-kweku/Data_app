@@ -1,38 +1,35 @@
-    import { Request, Response, NextFunction } from "express";
-    import { PrismaClient, Role, TrxnStatus, TrxnType } from "@prisma/client";
-    import { AppError } from "../utils/errors";
-    import {
+import { Request, Response, NextFunction } from "express";
+import { PrismaClient, Role, TrxnStatus, TrxnType } from "@prisma/client";
+import { AppError } from "../utils/errors";
+import {
     tppAirtimeTopup,
     tppDataBundle,
     tppCollectMoMo,
     tppTransactionStatus,
     sendTPPSms,
-    } from "../services/tppClient";
-    import bcrypt from "bcrypt"
-    import jwt,{SignOptions} from "jsonwebtoken"
+} from "../services/tppClient";
+import jwt, { SignOptions } from "jsonwebtoken";
 import axios from "axios";
 
-    const prisma = new PrismaClient();
-    const JWT_SECRET:string=process.env.JWT_SECRET||"dev-secret";
-    const JWT_EXPIRES_IN:string=process.env.JWT_EXPIRES_IN||"7d";
-    const HUBTEL_OTP_BASE_URL="https://api-otp.hubtel.com/otp";
-    const HUBTEL_CLIENT_ID=process.env.HUBTEL_CLIENT_SECRET||"";
-    const HUBTEL_CLIENT_SECRET=process.env.HUBTEL_CLIENT_SECRET||"";
-    const HUBTEL_AUTH=Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString("base64");
+const prisma = new PrismaClient();
 
-    // export async function sendOtp(phoneNumber:string){
-    //     const body={
-    //         senderId:"",
-    //         phoneNumber,
-    //         countryCode:"GH"
-    //     }
-    // }
-    function generateToken(user:{id:string;role:Role}){
-        const options:SignOptions={expiresIn:JWT_EXPIRES_IN as any};
-        return jwt.sign({id:user.id,role:user.role},JWT_SECRET,options)
+
+const JWT_SECRET: string = process.env.JWT_SECRET || "dev-secret";
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
+
+
+const HUBTEL_OTP_BASE_URL = "https://api-otp.hubtel.com/otp";
+const HUBTEL_CLIENT_ID = process.env.HUBTEL_CLIENT_ID || "";
+const HUBTEL_CLIENT_SECRET = process.env.HUBTEL_CLIENT_SECRET || "";
+const HUBTEL_AUTH = Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString("base64");
+
+
+function generateToken(user: { id: string; role: Role }) {
+    const options: SignOptions = { expiresIn: JWT_EXPIRES_IN as any };
+    return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, options);
     }
 
-    /** Helpers */
+
     function toNumber(val: any): number {
     if (val == null) return 0;
     if (typeof val === "number") return val;
@@ -40,153 +37,126 @@ import axios from "axios";
     return Number(val);
     }
 
+
     function getStatusCode(apiResp: any): string {
-    return (
-        apiResp?.["status-code"] ??
-        apiResp?.status_code ??
-        apiResp?.statusCode ??
-        "99"
-    );
+    return apiResp?.["status-code"] ?? apiResp?.status_code ?? apiResp?.statusCode ?? "99";
     }
 
-    // send-otp
-   export async function sendOtp(req:Request,res:Response,next:NextFunction){
-    try{
-        const {phoneNumber,countryCode="GH"}=req.body;
-        if(!phoneNumber) throw new AppError("Phone number required ",400);
 
-        const response=await axios.post(
-            `${HUBTEL_OTP_BASE_URL}/send`,{senderId:"DataApp",phoneNumber,countryCode},
-            {headers:{Authorization:HUBTEL_AUTH,
-                "Content-Type":"application/json"
-            }}
+    export async function sendOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+        const { phoneNumber, countryCode = "GH" } = req.body;
+        if (!phoneNumber) throw new AppError("Phone number required", 400);
+
+        const response = await axios.post(
+        `${HUBTEL_OTP_BASE_URL}/send`,
+        {
+            senderId: "DataApp",
+            phoneNumber,
+            countryCode,
+        },
+        {
+            headers: {
+            Authorization: `Basic ${HUBTEL_AUTH}`,
+            "Content-Type": "application/json",
+            },
+        }
         );
 
-        const {requestId,prefix}=response.data.data;
+        const { requestId, prefix } = response.data.data;
 
-        // save otp temporary
         await prisma.otpSession.create({
-            data:{phoneNumber,requestId,prefix,expiresAt:new Date(Date.now()+5*60*1000)}
-        })
+        data: {
+            phoneNumber,
+            requestId,
+            prefix,
+            expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        },
+        });
 
-        return res.status(200).json({message:"OTP sent",requestId,prefix})
-    }catch(err:any){
-        return next(err)
+        return res.status(200).json({ message: "OTP sent", requestId, prefix });
+    } catch (err: any) {
+        console.error("OTP Send Error:", err.response?.data || err.message);
+        return next(new AppError("Failed to send OTP", 500));
     }
-}
+    }
 
+    export async function verifyOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+        const { phoneNumber, requestId, prefix, code } = req.body;
+        if (!phoneNumber || !requestId || !prefix || !code)
+        throw new AppError("phoneNumber, requestId, prefix and code are required", 400);
 
-export async function verifyOtp(req:Request,res:Response,next:NextFunction){
-    try{
-        const {phoneNumber,requestId,prefix,code}=req.body;
-        if(!phoneNumber||!requestId||!prefix||!code) throw new AppError("phoneNumber , requestId, prefix and code required",400);
         await axios.post(
-            `${HUBTEL_OTP_BASE_URL}/verify`,
-            {requestId,prefix,code},
-            {headers:{
-                Authorization:HUBTEL_AUTH,"Content-Type":"application/json"
-            }}
+        `${HUBTEL_OTP_BASE_URL}/verify`,
+        { requestId, prefix, code },
+        {
+            headers: {
+            Authorization: `Basic ${HUBTEL_AUTH}`,
+            "Content-Type": "application/json",
+            },
+        }
         );
 
-        let user=await prisma.user.findUnique({where:{phone:phoneNumber}})
-        if(!user){
-            user=await prisma.user.create({
-                data:{phone:phoneNumber}})
+        let user = await prisma.user.findUnique({ where: { phone: phoneNumber } });
+
+        if (!user) {
+        user = await prisma.user.create({
+            data: { phone: phoneNumber, role: Role.USER },
+        });
+
+        await prisma.wallet.create({
+            data: { userId: user.id, balance: 0 },
+        });
         }
 
-        return res.status(200).json({message:"OTP verified",user})
+        const token = generateToken(user);
 
+        return res.status(200).json({
+        message: "Authentication successful",
+        token,
+        user,
+        });
+    } catch (err: any) {
+        console.error("OTP Verify Error:", err.response?.data || err.message);
+        if (err.response?.status === 400)
+        return next(new AppError("Invalid OTP or expired session", 400));
 
-    }catch(err:any){
-        if(err.response?.status===400){
-            return next(new AppError("Invalid OTP or Expired session",400))
+        return next(new AppError("Failed to verify OTP", 500));
+    }
+    }
+
+    export async function resetOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+        const { requestId } = req.body;
+        if (!requestId) throw new AppError("requestId is required", 400);
+
+        const response = await axios.post(
+        `${HUBTEL_OTP_BASE_URL}/resend`,
+        { requestId },
+        {
+            headers: {
+            Authorization: `Basic ${HUBTEL_AUTH}`,
+            "Content-Type": "application/json",
+            },
         }
-        return next(err)
-}
-}
+        );
 
+        const { message, code, data } = response.data;
 
+        await prisma.otpSession.updateMany({
+        where: { requestId },
+        data: { prefix: data.prefix, updatedAt: new Date() },
+        });
 
-    export async function registerUser(req: Request, res: Response, next: NextFunction) {
-        try {
-            const { email, name, password } = req.body;
-        
-            if (!email || !name || !password) {
-                throw new AppError("Email, name, and password are required", 400);
-            }
-        
-            const existing = await prisma.user.findUnique({ where: { email } });
-            if (existing) throw new AppError("Email already registered", 400);
-        
-            const passwordHash = await bcrypt.hash(password, 10);
-        
-            const user = await prisma.user.create({
-                data: {
-                email,
-                name,
-                passwordHash,
-                role: Role.USER,
-                },
-            });
-        
-            await prisma.wallet.create({
-                data: { userId: user.id, balance: 0 },
-            });
-        
-            const token = generateToken(user);
-        
-            return res.status(201).json({
-                message: "Registration successful",
-                token,
-                user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                },
-            });
-            } catch (err) {
-            next(err);
-            }
-        }
-        
-export async function loginUser(req: Request, res: Response, next: NextFunction) {
-        try {
-                const { email, password } = req.body;
-            
-                if (!email || !password)
-                    throw new AppError("Email and password required", 400);
-            
-                const user = await prisma.user.findUnique({ where: { email } });
-                if (!user || !user.passwordHash)
-                    throw new AppError("Invalid credentials", 401);
-            
-                const validPassword = await bcrypt.compare(password, user.passwordHash);
-                if (!validPassword)
-                    throw new AppError("Invalid credentials", 401);
-            
-                const token = generateToken(user);
-            
-                return res.json({
-                    message: "Login successful",
-                    token,
-                    user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    },
-                });
-                } catch (err) {
-                next(err);
-                }
-            }
-            
-        
+        return res.json({ success: true, message, code, data });
+    } catch (err: any) {
+        console.error("OTP Resend Error:", err.response?.data || err.message);
+        next(new AppError("Failed to resend OTP", 500));
+    }
+    }
 
-    /**
-     * FUND WALLET VIA MOMO (C2B)
-     */
+    
     export async function fundWalletViaMomo(req: Request, res: Response, next: NextFunction) {
     try {
         const user = (req as any).user;
@@ -199,7 +169,6 @@ export async function loginUser(req: Request, res: Response, next: NextFunction)
         if (isNaN(baseAmount) || baseAmount <= 0) throw new AppError("Invalid amount", 400);
 
         const trxnRef = `FUND_${Date.now()}_${user.id.slice(0, 6)}`;
-
         const apiResp = await tppCollectMoMo({ customer, amount: baseAmount, trxn: trxnRef, network });
 
         const statusCode = getStatusCode(apiResp);
@@ -248,7 +217,9 @@ export async function loginUser(req: Request, res: Response, next: NextFunction)
         console.error("fundWalletViaMomo error:", err);
         return next(err);
     }
-    }
+}
+
+
 
     /**
      * BUY AIRTIME VIA MOMO
@@ -613,5 +584,5 @@ export async function loginUser(req: Request, res: Response, next: NextFunction)
     }
     }
 
-    // user auth
+
 
