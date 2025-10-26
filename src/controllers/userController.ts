@@ -150,35 +150,38 @@ export async function verifyOtp(req:Request,res:Response,next:NextFunction){
             }
         }
         
-
-        export async function loginUser(req: Request, res: Response, next: NextFunction) {
-            try {
-            const { email, password } = req.body;
-        
-            if (!email || !password) throw new AppError("Email and password required", 400);
-        
-            const user = await prisma.user.findUnique({ where: { email } });
-            if (!user) throw new AppError("Invalid credentials", 401);
-        
-            const validPassword = await bcrypt.compare(password, user.passwordHash);
-            if (!validPassword) throw new AppError("Invalid credentials", 401);
-        
-            const token = generateToken(user);
-        
-            return res.json({
-                message: "Login successful",
-                token,
-                user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                },
-            });
-            } catch (err) {
-            next(err);
+export async function loginUser(req: Request, res: Response, next: NextFunction) {
+        try {
+                const { email, password } = req.body;
+            
+                if (!email || !password)
+                    throw new AppError("Email and password required", 400);
+            
+                const user = await prisma.user.findUnique({ where: { email } });
+                if (!user || !user.passwordHash)
+                    throw new AppError("Invalid credentials", 401);
+            
+                const validPassword = await bcrypt.compare(password, user.passwordHash);
+                if (!validPassword)
+                    throw new AppError("Invalid credentials", 401);
+            
+                const token = generateToken(user);
+            
+                return res.json({
+                    message: "Login successful",
+                    token,
+                    user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    },
+                });
+                } catch (err) {
+                next(err);
+                }
             }
-        }
+            
         
 
     /**

@@ -12,7 +12,7 @@ model User {
   email             String?             @unique
   phone             String?              @unique
   name              String?
-  passwordHash      String
+  passwordHash      String?
   role              Role                @default(VENDOR)
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt

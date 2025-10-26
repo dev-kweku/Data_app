@@ -73,13 +73,16 @@ export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) throw new AppError("Email and password required", 400);
+    if (!email || !password)
+      throw new AppError("Email and password required", 400);
 
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new AppError("Invalid credentials", 401);
+    if (!user || !user.passwordHash)
+      throw new AppError("Invalid credentials", 401);
 
     const validPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!validPassword) throw new AppError("Invalid credentials", 401);
+    if (!validPassword)
+      throw new AppError("Invalid credentials", 401);
 
     const token = generateToken(user);
 
@@ -97,6 +100,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     next(err);
   }
 }
+
 
 /**
  * Get profile of authenticated user

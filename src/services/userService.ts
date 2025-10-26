@@ -72,12 +72,15 @@
      * Verify user credentials (email + password)
      */
     export async function verifyUserCredentials(email: string, password: string) {
-    const user = await findUserByEmail(email);
-    if (!user) throw new AppError("Invalid email or password", 401);
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new AppError("Invalid email or password", 401);
-
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
-    }
+        const user = await findUserByEmail(email);
+        if (!user || !user.passwordHash)
+            throw new AppError("Invalid email or password", 401);
+        
+            const valid = await bcrypt.compare(password, user.passwordHash);
+            if (!valid)
+            throw new AppError("Invalid email or password", 401);
+        
+            const { passwordHash, ...safeUser } = user;
+            return safeUser;
+        }
+        
