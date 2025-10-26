@@ -10,11 +10,23 @@
     } from "../services/tppClient";
     import bcrypt from "bcrypt"
     import jwt,{SignOptions} from "jsonwebtoken"
+import axios from "axios";
 
     const prisma = new PrismaClient();
     const JWT_SECRET:string=process.env.JWT_SECRET||"dev-secret";
     const JWT_EXPIRES_IN:string=process.env.JWT_EXPIRES_IN||"7d";
+    const HUBTEL_OTP_BASE_URL="https://api-otp.hubtel.com/otp";
+    const HUBTEL_CLIENT_ID=process.env.HUBTEL_CLIENT_SECRET||"";
+    const HUBTEL_CLIENT_SECRET=process.env.HUBTEL_CLIENT_SECRET||"";
+    const HUBTEL_AUTH=Buffer.from(`${HUBTEL_CLIENT_ID}:${HUBTEL_CLIENT_SECRET}`).toString("base64");
 
+    // export async function sendOtp(phoneNumber:string){
+    //     const body={
+    //         senderId:"",
+    //         phoneNumber,
+    //         countryCode:"GH"
+    //     }
+    // }
     function generateToken(user:{id:string;role:Role}){
         const options:SignOptions={expiresIn:JWT_EXPIRES_IN as any};
         return jwt.sign({id:user.id,role:user.role},JWT_SECRET,options)
@@ -36,6 +48,50 @@
         "99"
     );
     }
+
+    // send-otp
+    export const sendOtp=async(req:Request,res:Response)=>{
+        try{
+            const {phoneNumber,countryCode="GH"}=req.body;
+            if(!phoneNumber) throw new AppError("Phone number is required",400);
+
+            const response=await axios.post(`${HUBTEL_OTP_BASE_URL}/send`,{
+                senderId:"",
+                phoneNumber,
+                countryCode,
+            },{headers:{Authorization:`Basic ${HUBTEL_AUTH}`,
+            "Content-Type":"application/json",
+        },
+            
+        });
+        if(response.data.code !=="0000") throw new AppError("Failed to send OTP",502);
+
+        const {requestId,prefix}=response.data.data;
+
+        await prisma.qrTransaction.create({
+            data:{
+                trxn:requestId,
+                type:"OTP",
+                customer:phoneNumber,
+                amount:0,
+                network:0,
+                status:"PENDING",
+                response:{prefix},
+                qrCodeUrl:""
+            }
+        })
+        return res.json({
+            message:"OTP sent successfully",
+            requestId,
+            prefix,
+        })
+
+        }catch(err:any){
+            console.error("Hubtel OTP Send Error:",err.message);
+            res.status(500).json({message:"Failed to send OTP",error:err.message})
+        }
+    }
+
 
 
     export async function registerUser(req: Request, res: Response, next: NextFunction) {

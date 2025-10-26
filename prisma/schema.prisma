@@ -19,6 +19,7 @@ model User {
   transactions      Transaction[]
   wallet            Wallet?
   WalletTransaction WalletTransaction[]
+  Beneficiary       Beneficiary[]
 }
 
 model Wallet {
@@ -93,6 +94,28 @@ model WalletTransaction {
   metadata     String?
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])
+}
+
+model Beneficiary {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  phone     String
+  networkId Int?
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model OtpSession {
+  id          String   @id @default(cuid())
+  phoneNumber String
+  reuestedId  String
+  prefix      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
 }
 
 enum Role {
