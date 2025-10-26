@@ -9,8 +9,9 @@ datasource db {
 
 model User {
   id                String              @id @default(uuid())
-  email             String              @unique
-  name              String
+  email             String?             @unique
+  phone             String?              @unique
+  name              String?
   passwordHash      String
   role              Role                @default(VENDOR)
   createdAt         DateTime            @default(now())
@@ -112,7 +113,7 @@ model Beneficiary {
 model OtpSession {
   id          String   @id @default(cuid())
   phoneNumber String
-  reuestedId  String
+  requestId   String
   prefix      String
   expiresAt   DateTime
   createdAt   DateTime @default(now())

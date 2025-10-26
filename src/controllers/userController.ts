@@ -50,47 +50,60 @@ import axios from "axios";
     }
 
     // send-otp
-    export const sendOtp=async(req:Request,res:Response)=>{
-        try{
-            const {phoneNumber,countryCode="GH"}=req.body;
-            if(!phoneNumber) throw new AppError("Phone number is required",400);
+   export async function sendOtp(req:Request,res:Response,next:NextFunction){
+    try{
+        const {phoneNumber,countryCode="GH"}=req.body;
+        if(!phoneNumber) throw new AppError("Phone number required ",400);
 
-            const response=await axios.post(`${HUBTEL_OTP_BASE_URL}/send`,{
-                senderId:"",
-                phoneNumber,
-                countryCode,
-            },{headers:{Authorization:`Basic ${HUBTEL_AUTH}`,
-            "Content-Type":"application/json",
-        },
-            
-        });
-        if(response.data.code !=="0000") throw new AppError("Failed to send OTP",502);
+        const response=await axios.post(
+            `${HUBTEL_OTP_BASE_URL}/send`,{senderId:"DataApp",phoneNumber,countryCode},
+            {headers:{Authorization:HUBTEL_AUTH,
+                "Content-Type":"application/json"
+            }}
+        );
 
         const {requestId,prefix}=response.data.data;
 
-        await prisma.qrTransaction.create({
-            data:{
-                trxn:requestId,
-                type:"OTP",
-                customer:phoneNumber,
-                amount:0,
-                network:0,
-                status:"PENDING",
-                response:{prefix},
-                qrCodeUrl:""
-            }
-        })
-        return res.json({
-            message:"OTP sent successfully",
-            requestId,
-            prefix,
+        // save otp temporary
+        await prisma.otpSession.create({
+            data:{phoneNumber,requestId,prefix,expiresAt:new Date(Date.now()+5*60*1000)}
         })
 
-        }catch(err:any){
-            console.error("Hubtel OTP Send Error:",err.message);
-            res.status(500).json({message:"Failed to send OTP",error:err.message})
-        }
+        return res.status(200).json({message:"OTP sent",requestId,prefix})
+    }catch(err:any){
+        return next(err)
     }
+}
+
+
+export async function verifyOtp(req:Request,res:Response,next:NextFunction){
+    try{
+        const {phoneNumber,requestId,prefix,code}=req.body;
+        if(!phoneNumber||!requestId||!prefix||!code) throw new AppError("phoneNumber , requestId, prefix and code required",400);
+        await axios.post(
+            `${HUBTEL_OTP_BASE_URL}/verify`,
+            {requestId,prefix,code},
+            {headers:{
+                Authorization:HUBTEL_AUTH,"Content-Type":"application/json"
+            }}
+        );
+
+        let user=await prisma.user.findUnique({where:{phone:phoneNumber}})
+        if(!user){
+            user=await prisma.user.create({
+                data:{phone:phoneNumber}})
+        }
+
+        return res.status(200).json({message:"OTP verified",user})
+
+
+    }catch(err:any){
+        if(err.response?.status===400){
+            return next(new AppError("Invalid OTP or Expired session",400))
+        }
+        return next(err)
+}
+}
 
 
 
