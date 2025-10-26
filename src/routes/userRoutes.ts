@@ -9,16 +9,23 @@ import {
     buyAirtimeViaWallet,
     buyDataViaWallet,
     getUserTransactions,
-    loginUser,
-    registerUser
+    sendOtp,
+    verifyOtp,
+    resetOtp
 } from "../controllers/userController";
 
 const router = Router();
 
+router.post("/user/auth/send-otp",sendOtp)
+router.post("/user/auth/verify-otp",verifyOtp)
+router.post("/user/auth/reset-otp",resetOtp)
+
 router.use(authenticate);
 
-router.post("/user/register",registerUser,)
-router.post("/user/login",loginUser);
+/***
+ * TODO :UPDATE THE AUTH MIDDLEWARE TO USE OTP INSTEAD OF EMAIL/PASSWORD
+ */
+
 
 router.post("/user/wallet/fund", fundWalletViaMomo); // Initiate MoMo funding
 router.get("/user/wallet/verify/:trxn", verifyWalletFunding); // Verify funding status
