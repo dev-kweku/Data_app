@@ -11,7 +11,8 @@ import {
     getUserTransactions,
     sendOtp,
     verifyOtp,
-    resetOtp
+    resetOtp,
+    getProfile
 } from "../controllers/userController";
 
 const router = Router();
@@ -26,7 +27,7 @@ router.use(authenticate);
  * TODO :UPDATE THE AUTH MIDDLEWARE TO USE OTP INSTEAD OF EMAIL/PASSWORD
  */
 
-
+router.get("/user/profile",authenticate,getProfile)
 router.post("/user/wallet/fund", fundWalletViaMomo); // Initiate MoMo funding
 router.get("/user/wallet/verify/:trxn", verifyWalletFunding); // Verify funding status
 router.get("/user/wallet/balance", getWalletBalance); // Get current wallet balance

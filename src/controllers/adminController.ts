@@ -348,7 +348,7 @@
         }
 
     /**
-     * 💼 View Wallet
+     * View Wallet
      */
     export async function getWallet(req: Request, res: Response, next: NextFunction) {
     try {
@@ -364,7 +364,7 @@
     }
 
     /**
-     * ⚙️ Set Vendor Commission
+     *  Set Vendor Commission
      */
     export async function setCommission(req: Request, res: Response, next: NextFunction) {
     try {

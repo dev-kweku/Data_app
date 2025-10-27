@@ -10,6 +10,7 @@ import {
 } from "../services/tppClient";
 import jwt, { SignOptions } from "jsonwebtoken";
 import axios from "axios";
+import { getOrCreateWallet } from "../services/walletService";
 
 const prisma = new PrismaClient();
 
@@ -582,6 +583,40 @@ function generateToken(user: { id: string; role: Role }) {
     } catch (err: any) {
         return next(err);
     }
+    }
+
+    export async function getProfile(req:Request,res:Response,next:NextFunction){
+        try{
+            const user=(req as any).user;
+            if(!user) throw new AppError("Unauthorized access",401)
+
+                const foundUser=await prisma.user.findUnique({
+                    where:{id:user.id},
+                    select:{
+                        id:true,
+                        name:true,
+                        email:true,
+                        phone:true,
+                        role:true,
+                        createdAt:true,
+                    }
+                })
+
+                if(!foundUser) throw new AppError("User not found",404);
+
+                // fetch user wallet
+                const wallet=await getOrCreateWallet(foundUser.id);
+                return res.status(200).json({
+                    message:"Profile fetched successfully",
+                    user:{
+                        ...foundUser,getWalletBalance:Number(wallet.balance||0)
+                    }
+                })
+
+        }catch(err:any){
+            next(err)
+
+        }
     }
 
 
