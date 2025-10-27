@@ -606,10 +606,45 @@ function generateToken(user: { id: string; role: Role }) {
 
                 // fetch user wallet
                 const wallet=await getOrCreateWallet(foundUser.id);
+                // get recent transactions
+                const transactions=await prisma.transaction.findMany({
+                    where:{
+                        userId:foundUser.id,
+                        status:{not:TrxnStatus.PENDING}
+                    },
+                    orderBy:{createdAt:"desc"},
+                    take:5,
+                    select:{
+                        id:true,
+                        trxnRef:true,
+                        type:true,
+                        amount:true,
+                        commission:true,
+                        status:true,
+                        recipient:true,
+                        networkId:true,
+                        bundlePlanId:true,
+                        createdAt:true,
+                    }
+                })
+
+
                 return res.status(200).json({
                     message:"Profile fetched successfully",
                     user:{
-                        ...foundUser,getWalletBalance:Number(wallet.balance||0)
+                        ...foundUser,getWalletBalance:Number(wallet.balance||0),
+                        recentTransactions:transactions.map((t)=>({
+                            id:t.id,
+                            trxnRef:t.trxnRef,
+                            type:t.type,
+                            amount:Number(t.amount),
+                            commission:Number(t.commission??0),
+                            status:t.status,
+                            recipient:t.recipient,
+                            networkId:t.networkId,
+                            bundlePlanId:t.bundlePlanId,
+                            createdAt:t.createdAt
+                        }))
                     }
                 })
 
